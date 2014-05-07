@@ -1,11 +1,11 @@
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
-static const char font[]        = "-*-*-medium-*-*-*-14-*-*-*-*-*-*-*";
-static const char* normbgcolor  = "#222222";
-static const char* normfgcolor  = "#cccccc";
-static const char* selbgcolor   = "#555555";
-static const char* selfgcolor   = "#ffffff";
+static const char font[]        = "$feel.font$";
+static const char* normbgcolor  = "$feel.fadeColor$";
+static const char* normfgcolor  = "$feel.foreground$";
+static const char* selbgcolor   = "$feel.background$";
+static const char* selfgcolor   = "$feel.foreground$";
 static const char before[]      = "<";
 static const char after[]       = ">";
 static const int  tabwidth      = 200;
@@ -16,8 +16,8 @@ static const Bool foreground    = True;
  * then the current position is changed + newposition. If npisrelative
  * is False, then newposition is an absolute position.
  */
-static int  newposition   = 0;
-static Bool npisrelative  = False;
+static int  newposition   = 1;
+static Bool npisrelative  = True;
 
 #define SETPROP(p) { \
 	.v = (char *[]){ "/bin/sh", "-c", \
