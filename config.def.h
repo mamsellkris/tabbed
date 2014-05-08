@@ -1,11 +1,11 @@
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
-static const char font[]        = "$feel.font$";
-static const char* normbgcolor  = "$feel.fadeColor$";
-static const char* normfgcolor  = "$feel.foreground$";
-static const char* selbgcolor   = "$feel.background$";
-static const char* selfgcolor   = "$feel.foreground$";
+static const char font[]        = "$tabbed.font$";
+static const char* normbgcolor  = "$tabbed.fadeColor$";
+static const char* normfgcolor  = "$tabbed.foreground$";
+static const char* selbgcolor   = "$tabbed.background$";
+static const char* selfgcolor   = "$tabbed.foreground$";
 static const char before[]      = "<";
 static const char after[]       = ">";
 static const int  tabwidth      = 200;
