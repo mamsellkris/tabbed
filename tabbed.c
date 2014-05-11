@@ -84,7 +84,7 @@ typedef struct Client {
 	int tabx;
 	Bool mapped;
 	Bool closed;
-  Bool isurgent;
+	Bool isurgent;
 } Client;
 
 /* function declarations */
@@ -351,7 +351,7 @@ drawbar(void) {
 
 	for(c = (fc > 0)? fc : 0; c < nclients && dc.x < width; c++) {
 		dc.w = tabwidth;
-    col = getcolors(c == sel, clients[c]->isurgent);
+	  col = getcolors(c == sel, clients[c]->isurgent);
 		if(c == sel) {
 			if((n * tabwidth) > width) {
 				dc.w += width % tabwidth;
@@ -455,8 +455,8 @@ focus(int c) {
 	sendxembed(c, XEMBED_FOCUS_IN, XEMBED_FOCUS_CURRENT, 0, 0);
 	sendxembed(c, XEMBED_WINDOW_ACTIVATE, 0, 0, 0);
 	xsettitle(win, clients[c]->name);
-  clients[c]->isurgent = False;
-  updateurgent();
+	clients[c]->isurgent = False;
+	updateurgent();
 
 	/* If sel is already c, change nothing. */
 	if(sel != c) {
@@ -483,7 +483,7 @@ focusin(const XEvent *e) {
 
 void
 focusout(const XEvent *e) {
-  updateurgent();
+	updateurgent();
 }
 
 void
@@ -550,18 +550,18 @@ getcolor(const char *colstr) {
 
 unsigned long *
 getcolors(int isselected, int isurgent) {
-  unsigned long *col = isselected ? dc.sel : dc.norm;
+	unsigned long *col = isselected ? dc.sel : dc.norm;
 
-  if (isurgent) {
-    if (urgenttrans & UrgentTransBG)
-      dc.urg[ColBG] = col[ColBG];
-    if (urgenttrans & UrgentTransFG)
-      dc.urg[ColFG] = col[ColFG];
+	if (isurgent) {
+	  if (urgenttrans & UrgentTransBG)
+	    dc.urg[ColBG] = col[ColBG];
+	  if (urgenttrans & UrgentTransFG)
+	    dc.urg[ColFG] = col[ColFG];
 
-    col = dc.urg;
-  }
+	  col = dc.urg;
+	}
 
-  return col;
+	return col;
 }
 
 int
@@ -830,7 +830,7 @@ propertynotify(const XEvent *e) {
 	char* selection = NULL;
 	Arg arg;
 
-  c = getclient(ev->window);
+	c = getclient(ev->window);
 
 	if(ev->state == PropertyNewValue && ev->atom == wmatom[WMSelectTab]) {
 		selection = getatom(WMSelectTab);
@@ -845,8 +845,8 @@ propertynotify(const XEvent *e) {
 	} else if(ev->state != PropertyDelete && ev->atom == XA_WM_NAME && c > -1) {
 		updatetitle(c);
 	} else if (ev->atom == XA_WM_HINTS) {
-    updatewmhints(ev->window);
-  }
+	  updatewmhints(ev->window);
+	}
 }
 
 void
@@ -1045,29 +1045,29 @@ setup(void) {
 
 void
 updateurgent(void) {
-  int c;
-  Bool isurgent;
+	int c;
+	Bool isurgent;
 	XWMHints *wmh;
 
-  for (c = 0; c < nclients && !clients[c]->isurgent; c++);
-  isurgent = c < nclients;
+	for (c = 0; c < nclients && !clients[c]->isurgent; c++);
+	isurgent = c < nclients;
 
-  if (!!winisurgent == !!isurgent)
-    return;
+	if (!!winisurgent == !!isurgent)
+	  return;
 
 	wmh = XGetWMHints(dpy, win);
-  if (!wmh)
-    wmh = XAllocWMHints();
-  if (!wmh)
-    return;
+	if (!wmh)
+	  wmh = XAllocWMHints();
+	if (!wmh)
+	  return;
 
-  wmh->flags &= ~XUrgencyHint;
-  if (isurgent)
-    wmh->flags |= XUrgencyHint;
+	wmh->flags &= ~XUrgencyHint;
+	if (isurgent)
+	  wmh->flags |= XUrgencyHint;
 
-  XSetWMHints(dpy, win, wmh);
+	XSetWMHints(dpy, win, wmh);
 	XFree(wmh);
-  XSync(dpy, False);
+	XSync(dpy, False);
 }
 
 void
@@ -1184,28 +1184,28 @@ unmanage(int c) {
 
 void
 updatewmhints(Window lwin) {
-  int c;
-  int isurgent;
+	int c;
+	int isurgent;
 	XWMHints *wmh;
 
 	wmh = XGetWMHints(dpy, lwin);
-  if (!wmh)
-    return;
+	if (!wmh)
+	  return;
 
-  isurgent = wmh->flags & XUrgencyHint;
+	isurgent = wmh->flags & XUrgencyHint;
 
-  if (lwin == win) {
-    winisurgent = isurgent;
-  } else {
-    c = getclient(lwin);
-    if (isurgent) {
-      clients[c]->isurgent = True;
-      drawbar();
-      updateurgent();
-    }
-  }
+	if (lwin == win) {
+	  winisurgent = isurgent;
+	} else {
+	  c = getclient(lwin);
+	  if (isurgent) {
+	    clients[c]->isurgent = True;
+	    drawbar();
+	    updateurgent();
+	  }
+	}
 
-  XFree(wmh);
+	XFree(wmh);
 }
 
 void
