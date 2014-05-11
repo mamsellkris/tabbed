@@ -66,6 +66,7 @@ typedef struct {
 	int x, y, w, h;
 	unsigned long norm[ColLast];
 	unsigned long sel[ColLast];
+	unsigned long urg[ColLast];
 	Drawable drawable;
 	GC gc;
 	struct {
@@ -83,6 +84,7 @@ typedef struct Client {
 	int tabx;
 	Bool mapped;
 	Bool closed;
+  Bool isurgent;
 } Client;
 
 /* function declarations */
@@ -101,11 +103,13 @@ static void *erealloc(void *o, size_t size);
 static void expose(const XEvent *e);
 static void focus(int c);
 static void focusin(const XEvent *e);
+static void focusout(const XEvent *e);
 static void focusonce(const Arg *arg);
 static void fullscreen(const Arg *arg);
 static char* getatom(int a);
 static int getclient(Window w);
 static unsigned long getcolor(const char *colstr);
+static unsigned long *getcolors(int isselected, int isurgent);
 static int getfirsttab(void);
 static Bool gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void initfont(const char *fontstr);
@@ -123,12 +127,14 @@ static void run(void);
 static void sendxembed(int c, long msg, long detail, long d1, long d2);
 static void setup(void);
 static void setcmd(int argc, char *argv[], int);
+void updateurgent(void);
 static void sigchld(int unused);
 static void spawn(const Arg *arg);
 static int textnw(const char *text, unsigned int len);
 static void unmanage(int c);
 static void updatenumlockmask(void);
 static void updatetitle(int c);
+void updatewmhints(Window lwin);
 static int xerror(Display *dpy, XErrorEvent *ee);
 static void xsettitle(Window w, const char *str);
 
@@ -143,6 +149,7 @@ static void (*handler[LASTEvent]) (const XEvent *) = {
 	[DestroyNotify] = destroynotify,
 	[Expose] = expose,
 	[FocusIn] = focusin,
+	[FocusOut] = focusout,
 	[KeyPress] = keypress,
 	[MapRequest] = maprequest,
 	[PropertyNotify] = propertynotify,
@@ -155,6 +162,7 @@ static Display *dpy;
 static DC dc;
 static Atom wmatom[WMLast];
 static Window root, win;
+static Bool winisurgent = False;
 static Client **clients = NULL;
 static int nclients = 0, sel = -1, lastsel = -1;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
@@ -343,15 +351,13 @@ drawbar(void) {
 
 	for(c = (fc > 0)? fc : 0; c < nclients && dc.x < width; c++) {
 		dc.w = tabwidth;
+    col = getcolors(c == sel, clients[c]->isurgent);
 		if(c == sel) {
-			col = dc.sel;
 			if((n * tabwidth) > width) {
 				dc.w += width % tabwidth;
 			} else {
 				dc.w = width - (n - 1) * tabwidth;
 			}
-		} else {
-			col = dc.norm;
 		}
 		drawtext(clients[c]->name, col);
 		dc.x += dc.w;
@@ -449,6 +455,8 @@ focus(int c) {
 	sendxembed(c, XEMBED_FOCUS_IN, XEMBED_FOCUS_CURRENT, 0, 0);
 	sendxembed(c, XEMBED_WINDOW_ACTIVATE, 0, 0, 0);
 	xsettitle(win, clients[c]->name);
+  clients[c]->isurgent = False;
+  updateurgent();
 
 	/* If sel is already c, change nothing. */
 	if(sel != c) {
@@ -471,6 +479,11 @@ focusin(const XEvent *e) {
 		if(focused == win)
 			focus(sel);
 	}
+}
+
+void
+focusout(const XEvent *e) {
+  updateurgent();
 }
 
 void
@@ -533,6 +546,22 @@ getcolor(const char *colstr) {
 		die("tabbed: cannot allocate color '%s'\n", colstr);
 
 	return color.pixel;
+}
+
+unsigned long *
+getcolors(int isselected, int isurgent) {
+  unsigned long *col = isselected ? dc.sel : dc.norm;
+
+  if (isurgent) {
+    if (urgenttrans & UrgentTransBG)
+      dc.urg[ColBG] = col[ColBG];
+    if (urgenttrans & UrgentTransFG)
+      dc.urg[ColFG] = col[ColFG];
+
+    col = dc.urg;
+  }
+
+  return col;
 }
 
 int
@@ -801,6 +830,8 @@ propertynotify(const XEvent *e) {
 	char* selection = NULL;
 	Arg arg;
 
+  c = getclient(ev->window);
+
 	if(ev->state == PropertyNewValue && ev->atom == wmatom[WMSelectTab]) {
 		selection = getatom(WMSelectTab);
 		if(!strncmp(selection, "0x", 2)) {
@@ -811,10 +842,11 @@ propertynotify(const XEvent *e) {
 			arg.v = cmd;
 			spawn(&arg);
 		}
-	} else if(ev->state != PropertyDelete && ev->atom == XA_WM_NAME
-			&& (c = getclient(ev->window)) > -1) {
+	} else if(ev->state != PropertyDelete && ev->atom == XA_WM_NAME && c > -1) {
 		updatetitle(c);
-	}
+	} else if (ev->atom == XA_WM_HINTS) {
+    updatewmhints(ev->window);
+  }
 }
 
 void
@@ -969,6 +1001,8 @@ setup(void) {
 	dc.norm[ColFG] = getcolor(normfgcolor);
 	dc.sel[ColBG] = getcolor(selbgcolor);
 	dc.sel[ColFG] = getcolor(selfgcolor);
+	dc.urg[ColBG] = getcolor(urgbgcolor);
+	dc.urg[ColFG] = getcolor(urgfgcolor);
 	dc.drawable = XCreatePixmap(dpy, root, ww, wh,
 			DefaultDepth(dpy, screen));
 	dc.gc = XCreateGC(dpy, root, 0, 0);
@@ -1007,6 +1041,33 @@ setup(void) {
 
 	nextfocus = foreground;
 	focus(-1);
+}
+
+void
+updateurgent(void) {
+  int c;
+  Bool isurgent;
+	XWMHints *wmh;
+
+  for (c = 0; c < nclients && !clients[c]->isurgent; c++);
+  isurgent = c < nclients;
+
+  if (!!winisurgent == !!isurgent)
+    return;
+
+	wmh = XGetWMHints(dpy, win);
+  if (!wmh)
+    wmh = XAllocWMHints();
+  if (!wmh)
+    return;
+
+  wmh->flags &= ~XUrgencyHint;
+  if (isurgent)
+    wmh->flags |= XUrgencyHint;
+
+  XSetWMHints(dpy, win, wmh);
+	XFree(wmh);
+  XSync(dpy, False);
 }
 
 void
@@ -1119,6 +1180,32 @@ unmanage(int c) {
 
 	drawbar();
 	XSync(dpy, False);
+}
+
+void
+updatewmhints(Window lwin) {
+  int c;
+  int isurgent;
+	XWMHints *wmh;
+
+	wmh = XGetWMHints(dpy, lwin);
+  if (!wmh)
+    return;
+
+  isurgent = wmh->flags & XUrgencyHint;
+
+  if (lwin == win) {
+    winisurgent = isurgent;
+  } else {
+    c = getclient(lwin);
+    if (isurgent) {
+      clients[c]->isurgent = True;
+      drawbar();
+      updateurgent();
+    }
+  }
+
+  XFree(wmh);
 }
 
 void
