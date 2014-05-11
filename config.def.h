@@ -6,10 +6,15 @@ static const char* normbgcolor  = "$tabbed.fadeColor$";
 static const char* normfgcolor  = "$tabbed.foreground$";
 static const char* selbgcolor   = "$tabbed.background$";
 static const char* selfgcolor   = "$tabbed.foreground$";
+static const char* urgbgcolor   = "$tabbed.urgentColor$";
+static const char* urgfgcolor   = "$tabbed.urgentColor$";
 static const char before[]      = "<";
 static const char after[]       = ">";
 static const int  tabwidth      = 200;
 static const Bool foreground    = True;
+
+enum { UrgentNoTrans = 0, UrgentTransBG = 1, UrgentTransFG = 2 };
+static const int urgenttrans = UrgentTransBG;
 
 /*
  * Where to place a new tab when it is opened. When npisrelative is True,
