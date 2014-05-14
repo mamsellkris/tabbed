@@ -19,7 +19,8 @@ static const Bool foreground    = True;
 static int  newposition   = 0;
 static Bool npisrelative  = False;
 
-static const Bool barstarthidden = False;
+static const Bool barshowstart = True;
+static const Bool barautohide  = False;
 
 #define SETPROP(p) { \
 	.v = (char *[]){ "/bin/sh", "-c", \

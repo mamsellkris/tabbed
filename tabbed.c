@@ -150,7 +150,7 @@ static void (*handler[LASTEvent]) (const XEvent *) = {
 	[PropertyNotify] = propertynotify,
 };
 static int bh, wx, wy, ww, wh;
-static int barvisible;
+static Bool barvisible, barshow;
 static unsigned int numlockmask = 0;
 static Bool running = True, nextfocus, doinitspawn = True,
 	    fillagain = False, closelastclient = False;
@@ -760,6 +760,9 @@ manage(Window w) {
 			sel++;
 		focus((nextfocus)? nextpos : ((sel < 0)? 0 : sel));
 		nextfocus = foreground;
+
+		if (barautohide && barshow)
+			setbarvisible(nclients > 1);
 	}
 }
 
@@ -959,7 +962,7 @@ setup(void) {
 	ww = 800;
 	wh = 600;
 	isfixed = 0;
-	barvisible = !barstarthidden;
+	barvisible = barshow = barshowstart;
 
 	if(geometry) {
 		tx = ty = tw = th = 0;
@@ -1076,6 +1079,7 @@ textnw(const char *text, unsigned int len) {
 
 void
 togglebar() {
+	barshow = !barshow;
 	setbarvisible(!barvisible);
 }
 
@@ -1144,6 +1148,9 @@ unmanage(int c) {
 			focus(sel);
 		}
 	}
+
+	if (barautohide && barshow)
+		setbarvisible(nclients > 1);
 
 	drawbar();
 	XSync(dpy, False);
