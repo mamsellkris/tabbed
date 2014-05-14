@@ -334,17 +334,17 @@ drawbar(void) {
 	if(fc > -1)
 		n = nclients - fc;
 
-	if((n * tabwidth) > width) {
-		dc.w = TEXTW(after);
-		dc.x = width - dc.w;
-		drawtext(after, dc.sel);
-		width -= dc.w;
-	}
+	if((n * tabwidth) > width)
+		width -= TEXTW(after);
+
 	dc.x = 0;
 
 	if(fc > 0) {
+		for (c = 0; c < fc && !clients[c]->isurgent; c++);
+		col = getcolors(True, c < fc);
+
 		dc.w = TEXTW(before);
-		drawtext(before, dc.sel);
+		drawtext(before, col);
 		dc.x += dc.w;
 		width -= dc.w;
 	}
@@ -363,6 +363,13 @@ drawbar(void) {
 		dc.x += dc.w;
 		clients[c]->tabx = dc.x;
 	}
+
+	if(c < nclients) {
+		for (; c < nclients && !clients[c]->isurgent; c++);
+		col = getcolors(True, c < nclients);
+		drawtext(after, col);
+	}
+
 	XCopyArea(dpy, dc.drawable, win, dc.gc, 0, 0, ww, bh, 0, 0);
 	XSync(dpy, False);
 }
