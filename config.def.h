@@ -19,6 +19,8 @@ static const Bool foreground    = True;
 static int  newposition   = 0;
 static Bool npisrelative  = False;
 
+static const Bool barstarthidden = False;
+
 #define SETPROP(p) { \
 	.v = (char *[]){ "/bin/sh", "-c", \
 		"prop=\"`xwininfo -children -id $1 | grep '^     0x' | sed -e's@^ *\\(0x[0-9a-f]*\\) \"\\([^\"]*\\)\".*@\\1 \\2@' | xargs -0 printf %b | dmenu -l 10`\" &&" \
@@ -53,6 +55,7 @@ static Key keys[] = { \
 
 	{ MODKEY,                       XK_q,      killclient,     { 0 } },
 
+	{ MODKEY,                       XK_b,      togglebar,      { 0 } },
 	{ 0,                            XK_F11,    fullscreen,     { 0 } },
 };
 

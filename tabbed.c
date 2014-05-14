@@ -121,11 +121,13 @@ static void resize(int c, int w, int h);
 static void rotate(const Arg *arg);
 static void run(void);
 static void sendxembed(int c, long msg, long detail, long d1, long d2);
+static void setbarvisible(Bool visible);
 static void setup(void);
 static void setcmd(int argc, char *argv[], int);
 static void sigchld(int unused);
 static void spawn(const Arg *arg);
 static int textnw(const char *text, unsigned int len);
+static void togglebar();
 static void unmanage(int c);
 static void updatenumlockmask(void);
 static void updatetitle(int c);
@@ -148,6 +150,7 @@ static void (*handler[LASTEvent]) (const XEvent *) = {
 	[PropertyNotify] = propertynotify,
 };
 static int bh, wx, wy, ww, wh;
+static int barvisible;
 static unsigned int numlockmask = 0;
 static Bool running = True, nextfocus, doinitspawn = True,
 	    fillagain = False, closelastclient = False;
@@ -253,7 +256,7 @@ configurenotify(const XEvent *e) {
 		dc.drawable = XCreatePixmap(dpy, root, ww, wh,
 				DefaultDepth(dpy, screen));
 		if(sel > -1)
-			resize(sel, ww, wh - bh);
+			resize(sel, ww, wh);
 		XSync(dpy, False);
 	}
 }
@@ -308,6 +311,9 @@ drawbar(void) {
 	unsigned long *col;
 	int c, fc, width, n = 0;
 	char *name = NULL;
+
+	if (!barvisible)
+		return;
 
 	if(nclients == 0) {
 		dc.x = 0;
@@ -443,7 +449,7 @@ focus(int c) {
 	if(c < 0 || c >= nclients)
 		return;
 
-	resize(c, ww, wh - bh);
+	resize(c, ww, wh);
 	XRaiseWindow(dpy, clients[c]->win);
 	XSetInputFocus(dpy, clients[c]->win, RevertToParent, CurrentTime);
 	sendxembed(c, XEMBED_FOCUS_IN, XEMBED_FOCUS_CURRENT, 0, 0);
@@ -819,22 +825,27 @@ propertynotify(const XEvent *e) {
 
 void
 resize(int c, int w, int h) {
+	int yoff = 0;
 	XConfigureEvent ce;
 	XWindowChanges wc;
 
-	ce.x = 0;
-	ce.y = bh;
+	yoff = 0;
+	if (barvisible)
+		yoff = bh;
+
+	ce.x = wc.x = 0;
+	ce.y = wc.y = yoff;
 	ce.width = wc.width = w;
-	ce.height = wc.height = h;
+	ce.height = wc.height = h - yoff;
 	ce.type = ConfigureNotify;
 	ce.display = dpy;
 	ce.event = clients[c]->win;
 	ce.window = clients[c]->win;
 	ce.above = None;
 	ce.override_redirect = False;
-	ce.border_width = 0;
+	ce.border_width = wc.border_width = 0;
 
-	XConfigureWindow(dpy, clients[c]->win, CWWidth|CWHeight, &wc);
+	XConfigureWindow(dpy, clients[c]->win, CWX|CWY|CWWidth|CWHeight, &wc);
 	XSendEvent(dpy, clients[c]->win, False, StructureNotifyMask,
 			(XEvent *)&ce);
 }
@@ -894,6 +905,17 @@ sendxembed(int c, long msg, long detail, long d1, long d2) {
 }
 
 void
+setbarvisible(Bool visible) {
+	int c;
+
+	barvisible = visible;
+	for (c = 0; c < nclients; c++)
+		resize(c, ww, wh);
+
+	drawbar();
+}
+
+void
 setcmd(int argc, char *argv[], int replace) {
 	int i;
 
@@ -937,6 +959,7 @@ setup(void) {
 	ww = 800;
 	wh = 600;
 	isfixed = 0;
+	barvisible = !barstarthidden;
 
 	if(geometry) {
 		tx = ty = tw = th = 0;
@@ -1049,6 +1072,11 @@ textnw(const char *text, unsigned int len) {
 	}
 
 	return XTextWidth(dc.font.xfont, text, len);
+}
+
+void
+togglebar() {
+	setbarvisible(!barvisible);
 }
 
 void
