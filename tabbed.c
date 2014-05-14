@@ -96,6 +96,7 @@ static void destroynotify(const XEvent *e);
 static void die(const char *errstr, ...);
 static void drawbar(void);
 static void drawtext(const char *text, unsigned long col[ColLast]);
+static void detachclient();
 static void *emallocz(size_t size);
 static void *erealloc(void *o, size_t size);
 static void expose(const XEvent *e);
@@ -359,6 +360,14 @@ drawbar(void) {
 	}
 	XCopyArea(dpy, dc.drawable, win, dc.gc, 0, 0, ww, bh, 0, 0);
 	XSync(dpy, False);
+}
+
+void
+detachclient() {
+	if (nclients) {
+		XReparentWindow(dpy, clients[sel]->win, root, 0, 0);
+		unmanage(sel);
+	}
 }
 
 void
